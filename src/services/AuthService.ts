@@ -20,7 +20,17 @@ class AuthService {
         if (! passwordCorrect)
             throw new AppError('Incorrect email/password combination', 401)
 
-        return this.createToken({ email: user.email })
+        const token = await this.createToken({ email: user.email })
+
+        return { 
+            token, 
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+            }
+        }
     }
 
     private createToken = async ({ email }: Pick<User, "email">) => {

@@ -12,12 +12,12 @@ class AuthController {
     login = async (req: Request, res: Response) => {
         const { email, password } = req.body
 
-        const token = await this.service.login({ email, password })
-
+        const { token, user } = await this.service.login({ email, password })
+        
         return response({
             res, 
             status: true,
-            data: { token }
+            data: { token, user }
         })
     }
 }
