@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import UserController from '@modules/users/controllers/UserController'
-import verifyToken from '@modules/auth/infra/http/middlewares/verifyToken'
+import verifyToken from '@modules/users/infra/http/middlewares/verifyToken'
 import multer from 'multer'
 import uploadConfig from '@config/upload'
 

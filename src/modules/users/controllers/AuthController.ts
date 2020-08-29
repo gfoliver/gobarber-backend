@@ -1,4 +1,4 @@
-import AuthService from "@modules/auth/services/AuthService"
+import AuthService from "@modules/users/services/AuthService"
 import { Request, Response } from "express"
 import response from "@shared/infra/http/utils/response"
 import { container } from "tsyringe"

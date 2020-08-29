@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import AppointmentsController from '@modules/appointments/controllers/AppointmentsController'
-import verifyToken from '@modules/auth/infra/http/middlewares/verifyToken'
+import verifyToken from '@modules/users/infra/http/middlewares/verifyToken'
 
 const controller = new AppointmentsController()
 

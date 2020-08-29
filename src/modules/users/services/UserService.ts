@@ -42,10 +42,11 @@ class UserService {
         if (user.avatar) {
             const filePath = path.join(filesFolder, user.avatar)
 
-            const fileExists = await fs.promises.stat(filePath)
-
-            if (fileExists)
+            try {
+                await fs.promises.stat(filePath)
                 await fs.promises.unlink(filePath)
+            }
+            catch {}                
         }
 
         user.avatar = avatar
