@@ -1,9 +1,4 @@
-import { hash } from "bcryptjs"
-import path from 'path'
-import fs from 'fs'
 import { injectable, inject } from 'tsyringe'
-
-import { filesFolder } from '@config/upload'
 
 import AppError from '@shared/errors/Error'
 
@@ -12,12 +7,20 @@ import User from "@modules/users/infra/typeorm/entities/User"
 import IUserRepository from "@modules/users/repositories/IUserRepository"
 import ICreateUserDTO from '@modules/users/dtos/ICreateUserDTO'
 import ISaveAvatarDTO from '@modules/users/dtos/ISaveAvatarDTO'
+import IHashProvider from '@shared/container/providers/HashProvider/models/IHashProvider'
+import IStorageProvider from '@shared/container/providers/StorageProvider/models/IStorageProvider'
 
 @injectable()
 class UserService {
     constructor(
         @inject('UserRepository')
-        private repository: IUserRepository
+        private repository: IUserRepository,
+
+        @inject('HashProvider')
+        private hashProvider: IHashProvider,
+
+        @inject('StorageProvider')
+        private storageProvider: IStorageProvider
     ) {}
 
     create = async ({ name, email, password }: ICreateUserDTO): Promise<User> => {
@@ -26,7 +29,7 @@ class UserService {
         if (userWithSameEmail)
             throw new AppError('Email already registered', 401)
 
-        const hashedPassword = await hash(password, 8)
+        const hashedPassword = await this.hashProvider.generate(password)
 
         const user = this.repository.create({ name, email, password: hashedPassword })
 
@@ -40,16 +43,12 @@ class UserService {
             throw new AppError('User not found', 401)
 
         if (user.avatar) {
-            const filePath = path.join(filesFolder, user.avatar)
-
-            try {
-                await fs.promises.stat(filePath)
-                await fs.promises.unlink(filePath)
-            }
-            catch {}                
+            await this.storageProvider.delete(user.avatar)
         }
 
-        user.avatar = avatar
+        const newAvatar = await this.storageProvider.save(avatar)
+
+        user.avatar = newAvatar
 
         await this.repository.save(user)
 

@@ -2,7 +2,9 @@ import path from 'path'
 import crypto from 'crypto'
 import multer from 'multer'
 
-export const filesFolder = path.resolve(__dirname, '..', '..', 'storage')
+export const filesFolder = path.resolve(__dirname, '..', '..', 'tmp')
+
+export const diskStorageFolder = path.resolve(filesFolder, 'storage')
 
 export default {
     storage: multer.diskStorage({

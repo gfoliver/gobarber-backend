@@ -1,4 +1,3 @@
-import { compare } from 'bcryptjs'
 import { sign } from 'jsonwebtoken'
 import { injectable, inject } from 'tsyringe'
 
@@ -7,6 +6,7 @@ import AppError from '@shared/errors/Error'
 import User from "@modules/users/infra/typeorm/entities/User"
 
 import IUserRepository from "@modules/users/repositories/IUserRepository"
+import IHashProvider from '@shared/container/providers/HashProvider/models/IHashProvider'
 
 type loginDTO = Pick<User, "email" | "password">
 
@@ -14,7 +14,9 @@ type loginDTO = Pick<User, "email" | "password">
 class AuthService {
     constructor(
         @inject('UserRepository')
-        private repository: IUserRepository
+        private repository: IUserRepository,
+
+        private hashProvider: IHashProvider
     ) {}
 
     login = async ({ email, password }: loginDTO) => {
@@ -23,7 +25,7 @@ class AuthService {
         if (! user)
             throw new AppError('Incorrect email/password combination', 401)
 
-        const passwordCorrect = await compare(password, user.password)
+        const passwordCorrect = await this.hashProvider.compare(password, user.password)
 
         if (! passwordCorrect)
             throw new AppError('Incorrect email/password combination', 401)

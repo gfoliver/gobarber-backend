@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>60/60</span>
+                <span class='fraction'>59/59</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.16% </span>
+                <span class="strong">76.83% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>79/95</span>
+                <span class='fraction'>63/82</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.12% </span>
+                <span class="strong">88.24% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>16/17</span>
+                <span class='fraction'>15/17</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>60/60</span>
+                <span class='fraction'>59/59</span>
             </div>
         
             
@@ -115,11 +115,7 @@
 <a name='L56'></a><a href='#L56'>56</a>
 <a name='L57'></a><a href='#L57'>57</a>
 <a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L59'></a><a href='#L59'>59</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -134,6 +130,12 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
@@ -158,11 +160,7 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
@@ -175,12 +173,7 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import { hash } from "bcryptjs"
-import path from 'path'
-import fs from 'fs'
-import { injectable, inject } from 'tsyringe'
-&nbsp;
-import { filesFolder } from '@config/upload'
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import { injectable, inject } from 'tsyringe'
 &nbsp;
 import AppError from '@shared/errors/Error'
 &nbsp;
@@ -189,12 +182,20 @@ import User from "@modules/users/infra/typeorm/entities/User"
 import IUserRepository from "@modules/users/repositories/IUserRepository"
 import ICreateUserDTO from '@modules/users/dtos/ICreateUserDTO'
 import ISaveAvatarDTO from '@modules/users/dtos/ISaveAvatarDTO'
+import IHashProvider from '@shared/container/providers/HashProvider/models/IHashProvider'
+import IStorageProvider from '@shared/container/providers/StorageProvider/models/IStorageProvider'
 &nbsp;
 @injectable()
 class UserService {
     constructor(
         @inject('UserRepository')
-        private repository: IUserRepository
+        private repository: IUserRepository,
+&nbsp;
+        @inject('HashProvider')
+        private hashProvider: IHashProvider,
+&nbsp;
+        @inject('StorageProvider')
+        private storageProvider: IStorageProvider
     ) {}
 &nbsp;
     create = async ({ name, email, password }: ICreateUserDTO): Promise&lt;User&gt; =&gt; {
@@ -203,7 +204,7 @@ class UserService {
         if (userWithSameEmail)
             throw new AppError('Email already registered', 401)
 &nbsp;
-        const hashedPassword = await hash(password, 8)
+        const hashedPassword = await this.hashProvider.generate(password)
 &nbsp;
         const user = this.repository.create({ name, email, password: hashedPassword })
 &nbsp;
@@ -217,16 +218,12 @@ class UserService {
             throw new AppError('User not found', 401)
 &nbsp;
         if (user.avatar) {
-            const filePath = path.join(filesFolder, user.avatar)
-&nbsp;
-            try {
-                await fs.promises.stat(filePath)
-                await fs.promises.unlink(filePath)
-            }
-            catch(e){}                
+            await this.storageProvider.delete(user.avatar)
         }
 &nbsp;
-        user.avatar = avatar
+        const newAvatar = await this.storageProvider.save(avatar)
+&nbsp;
+        user.avatar = newAvatar
 &nbsp;
         await this.repository.save(user)
 &nbsp;
@@ -234,14 +231,14 @@ class UserService {
     }
 }
 &nbsp;
-export default UserService<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></pre></td></tr></table></pre>
+export default UserService<span class="fstat-no" title="function not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank">istanbul</a>
-                at Sat Aug 29 2020 16:14:37 GMT-0300 (GMT-03:00)
+                at Sun Aug 30 2020 15:33:39 GMT-0300 (GMT-03:00)
             </div>
         </div>
         <script src="../../prettify.js"></script>
